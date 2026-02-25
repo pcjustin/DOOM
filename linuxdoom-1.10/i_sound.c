@@ -104,7 +104,7 @@ static int flag = 0;
 int 		lengths[NUMSFX];
 
 // The actual output device.
-int	audio_fd;
+int	audio_fd = -1;
 
 // The global mixing buffer.
 // Basically, samples from all active internal channels
@@ -667,7 +667,8 @@ void
 I_SubmitSound(void)
 {
   // Write it to DSP device.
-  write(audio_fd, mixbuffer, SAMPLECOUNT*BUFMUL);
+  if (audio_fd >= 0)
+    write(audio_fd, mixbuffer, SAMPLECOUNT*BUFMUL);
 }
 
 
@@ -925,7 +926,8 @@ void I_HandleSoundTimer( int ignore )
   {
     // See I_SubmitSound().
     // Write it to DSP device.
-    write(audio_fd, mixbuffer, SAMPLECOUNT*BUFMUL);
+    if (audio_fd >= 0)
+      write(audio_fd, mixbuffer, SAMPLECOUNT*BUFMUL);
 
     // Reset flag counter.
     flag = 0;

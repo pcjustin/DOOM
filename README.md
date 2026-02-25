@@ -117,3 +117,4 @@ The original source targets 32-bit Linux from 1997. The following changes were r
 | Pointer array allocations hardcoded `*4` | Changed to `sizeof(*ptr)` |
 | Pointer alignment arithmetic used `(int)ptr` | Changed to `(intptr_t)ptr` |
 | Colormap not installed, causing wrong colors | Added `XInstallColormap()` |
+| `audio_fd` defaults to 0 (stdin) in SNDSERV mode, causing SIGPIPE | Initialized `audio_fd = -1`; added guard in `I_SubmitSound` |
