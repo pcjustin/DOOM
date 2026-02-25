@@ -46,7 +46,7 @@ int XShmGetEventBase( Display* dpy ); // problems with g++?
 #include <sys/socket.h>
 
 #include <netinet/in.h>
-#include <errnos.h>
+#include <errno.h>
 #include <signal.h>
 
 #include "doomstat.h"
@@ -87,7 +87,7 @@ int		doPointerWarp = POINTER_WARP_COUNTDOWN;
 // replace each 320x200 pixel with multiply*multiply pixels.
 // According to Dave Taylor, it still is a bonehead thing
 // to use ....
-static int	multiply=1;
+static int	multiply=2;
 
 
 //
@@ -572,6 +572,7 @@ void UploadNewPalette(Colormap cmap, byte *palette)
 
 	    // store the colors to the current colormap
 	    XStoreColors(X_display, cmap, colors, 256);
+	    XInstallColormap(X_display, cmap);
 
 	}
 }
@@ -685,8 +686,7 @@ void grabsharedmemory(int size)
   // attach to the shared memory segment
   image->data = X_shminfo.shmaddr = shmat(id, 0, 0);
   
-  fprintf(stderr, "shared memory id=%d, addr=0x%x\n", id,
-	  (int) (image->data));
+  fprintf(stderr, "shared memory id=%d, addr=%p\n", id, image->data);
 }
 
 void I_InitGraphics(void)
