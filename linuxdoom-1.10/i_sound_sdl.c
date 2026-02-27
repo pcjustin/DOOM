@@ -309,28 +309,19 @@ void I_UpdateSound(void)
 
 
 //
-// SDL2 audio callback
-//
-// This function is called by SDL2's audio thread to fill the audio buffer
-//
-static void audio_callback(void* userdata, Uint8* stream, int len)
-{
-    // Mix the sound
-    I_UpdateSound();
-
-    // Copy mixbuffer to SDL's stream
-    memcpy(stream, mixbuffer, len);
-}
-
-
-//
 // I_SubmitSound
 //
-// SDL2 uses callback pattern, so this is a no-op
+// Queue mixed audio to SDL2 (non-blocking)
+// Note: I_UpdateSound() is called separately by the game loop
 //
 void I_SubmitSound(void)
 {
-    // SDL2 pulls data via callback - nothing to do here
+    // Queue the mixed buffer to SDL2 (non-blocking)
+    // SDL2 will play it when ready without blocking the game
+    if (audio_device)
+    {
+        SDL_QueueAudio(audio_device, mixbuffer, MIXBUFFERSIZE * sizeof(short));
+    }
 }
 
 
@@ -385,15 +376,17 @@ void I_InitSound()
     }
 
     // Set up desired audio format
+    // Note: Using NULL callback to use queue-based audio instead
+    // This prevents high-priority audio thread from blocking the system
     desired.freq = SAMPLERATE;
     desired.format = AUDIO_S16SYS;  // Signed 16-bit, system byte order
     desired.channels = 2;            // Stereo
-    desired.samples = SAMPLECOUNT;   // Buffer size
-    desired.callback = audio_callback;
+    desired.samples = SAMPLECOUNT * 2;   // Larger buffer to reduce calls
+    desired.callback = NULL;         // Use queue-based audio (non-blocking)
     desired.userdata = NULL;
 
     // Open audio device
-    audio_device = SDL_OpenAudioDevice(NULL, 0, &desired, &obtained, 0);
+    audio_device = SDL_OpenAudioDevice(NULL, 0, &desired, &obtained, SDL_AUDIO_ALLOW_ANY_CHANGE);
 
     if (!audio_device)
     {
@@ -490,13 +483,14 @@ int I_StartSound(int id, int vol, int sep, int pitch, int priority)
     // Unused
     priority = 0;
 
-    // Lock audio during channel modification
-    SDL_LockAudioDevice(audio_device);
+    // Note: No locking needed here. The channel array modifications
+    // are simple pointer assignments which are atomic on modern CPUs.
+    // Locking would cause stuttering when multiple sounds play.
+    // The worst case without locking is a brief audio glitch, which
+    // is preferable to game freezing.
 
     // Returns a handle (not used)
     id = addsfx(id, vol, steptable[pitch], sep);
-
-    SDL_UnlockAudioDevice(audio_device);
 
     return id;
 }
